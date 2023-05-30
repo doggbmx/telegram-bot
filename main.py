@@ -33,6 +33,7 @@ TOKEN = open('token.txt', 'r').read()
 
 current_description = None
 current_date = None
+final_date = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
@@ -48,41 +49,48 @@ async def get_description(update,context):
     global current_description
     current_description = update.message.text
     await update.message.reply_text('What is the date? (dd-mm-yyyy)')
-    
     return 2
 
 async def get_date(update, context):
     global current_date
-    global db
+    global final_date
     current_date = update.message.text
-    fecha = dt.date.strptime(current_date, '%d/%m/%Y')
+    print(f'current_date  {current_date}')
+    fecha = dt.datetime.strptime(current_date, '%d/%m/%Y').date()
+    print(f'fecha  {fecha}')
     format_date = fecha.strftime('%Y-%m-%d')
     slices = format_date.split('-')
     year = int(slices[0])
     month = int(slices[1])
     date = int(slices[2])
     final_date = dt.date(year=year, month=month, day=date)
-    print(f'format_date  {format_date}')
-    with app.app_context():
-        event_name = Event.query.filter_by(event_description=current_description).first()
-    if not event_name:
-        with app.app_context():
-            event = Event(event_description=current_description, date=final_date, reminded=False)
-        with app.app_context():
-            db.session.add(event)
-            db.session.commit()
-    else:
-        await update.message.reply_text('Event already exists!')
-        return
-    await update.message.reply_text('Event created!')
-    return ConversationHandler.END
+    print(f'format_date  {final_date}')
+    await update.message.reply_text(f'Are you sure you want to create the event? {current_description} on {current_date}? Reply with yes or no')
+    return 3
 
-async def sendReminder(update: Update, context: ContextTypes.DEFAULT_TYPE, event: str):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=f"Hoy tienes: {event}"
-    )
-    
+async def confirm_event(update, context):
+    global current_description
+    global final_date
+    global db
+    if update.message.text == 'yes':
+        with app.app_context():
+            event_name = Event.query.filter_by(event_description=current_description).first()
+        if not event_name:
+            with app.app_context():
+                event = Event(event_description=current_description, date=final_date, reminded=False)
+            with app.app_context():
+                db.session.add(event)
+                db.session.commit()
+        else:
+            await update.message.reply_text('Event already exists! Try again with /new.')
+            return ConversationHandler.END
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f'Event created! {current_description} on {current_date}'
+        )
+        return ConversationHandler.END
+    else:
+        return ConversationHandler.END    
 
 def cancel():
     return ConversationHandler.END
@@ -93,6 +101,7 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text="Sorry, I didn't understand that command."
         )
 
+## DEPRECATED
 def check_events():
     while True:
         today = dt.date.today()
@@ -107,29 +116,19 @@ def check_events():
                 
         time.sleep(60)
         
-threading.Thread(target=check_events).start()
+# threading.Thread(target=check_events).start()
 
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler('new', new_reminder)],
     states={
         1: [MessageHandler(filters.TEXT, get_description)],
-        2: [MessageHandler(filters.TEXT, get_date)]
+        2: [MessageHandler(filters.TEXT, get_date)],
+        3: [MessageHandler(filters.TEXT, confirm_event)],
+        4: [MessageHandler(filters.TEXT, create_event)]
     },
     fallbacks=[CommandHandler('cancel', cancel)],
     conversation_timeout=120,
 )
-
-# conv_handler = telegram.ext.ConversationHandler(
-#     entry_points=[telegram.ext.CommandHandler('new', new_reminder)],
-#     states = {
-#         1: [telegram.ext.MessageHandler(telegram.ext.Filters.text, get_description)],
-#         2: [telegram.ext.MessageHandler(telegram.ext.Filters.text, get_date)]
-#     },
-#     fallbacks=[telegram.ext.CommandHandler('cancel', cancel)]
-# )
-
-# disp.add_handler(telegram.ext.CommandHandler('start', start))
-# disp.add_handler(conv_handler)
 
 
 if __name__ == '__main__':
@@ -138,8 +137,7 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     application.add_handler(start_handler)
     application.add_handler(conv_handler)
-    application.add_handler(sendReminder)
-    # unknown_handler = MessageHandler(filters.COMMAND, unknown)
-    # application.add_handler(unknown_handler)
+    unknown_handler = MessageHandler(filters.COMMAND, unknown)
+    application.add_handler(unknown_handler)
     
     application.run_polling()
