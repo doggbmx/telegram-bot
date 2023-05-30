@@ -2,6 +2,7 @@ import threading
 import logging
 import time
 import datetime as dt
+from sqlalchemy import extract
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 from telegram import Update
@@ -81,6 +82,7 @@ async def confirm_event(update, context):
             with app.app_context():
                 db.session.add(event)
                 db.session.commit()
+            context.job_queue.run_repeating(notify_event, interval=5, chat_id=update.message.chat_id)
         else:
             await update.message.reply_text('Event already exists! Try again with /new.')
             return ConversationHandler.END
@@ -94,6 +96,28 @@ async def confirm_event(update, context):
 
 def cancel():
     return ConversationHandler.END
+
+async def notify_event(context):
+    job = context.job
+    today = dt.date.today()
+    
+    # with app.app_context():
+    #     tests = Event.query.filter_by(reminded=False)
+    #     for test in tests:
+            
+            # print(f'test => {dt.datetime.strptime(test.date, "%Y-%m-%d") == dt.datetime.strptime(today, "%Y-%m-%d")}')
+    with app.app_context():
+        # event_today = Event.query.filter_by(Event.date.strftime('%Y-%m-%d') == today.strftime('%Y-%m-%d')).all()
+        event_today = Event.query.filter(extract('day', Event.date)==today.day,
+                                         extract('month', Event.date)==today.month,
+                                         extract('year', Event.date)==today.year).all()
+        print(f'event_today => {event_today}')
+        for event in event_today:
+            print('event today')
+    #         # context.bot.send_message('Event today: ' + event.event_description)
+    #         # event.reminded = True
+            await context.bot.send_message(job.chat_id, text=f'One event is about to start: {event.event_description}')
+    #         # db.session.commit()
 
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
