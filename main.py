@@ -124,7 +124,6 @@ conv_handler = ConversationHandler(
         1: [MessageHandler(filters.TEXT, get_description)],
         2: [MessageHandler(filters.TEXT, get_date)],
         3: [MessageHandler(filters.TEXT, confirm_event)],
-        4: [MessageHandler(filters.TEXT, create_event)]
     },
     fallbacks=[CommandHandler('cancel', cancel)],
     conversation_timeout=120,
