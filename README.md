@@ -8,7 +8,8 @@ This project is a telegram bot for my girlfriend that I made on a lazy sunday af
 
 - Housekeeping
 - Modularize code
+- Implement AI (?) :monocle_face:
 
 ### Note
 
-I have a headache from having to work with dates in Python
+I have a headache from having to work with dates on Python
