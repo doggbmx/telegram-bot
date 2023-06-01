@@ -3,5 +3,6 @@ database.db
 
 createdatabase.py
 
-
+venv
+.venv
 token.txt
