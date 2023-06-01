@@ -1,3 +1,4 @@
+import os
 import logging
 import datetime as dt
 from sqlalchemy import extract
@@ -25,7 +26,7 @@ class Event(db.Model):
     event_description = db.Column(db.String(200), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
 
-TOKEN = open('token.txt', 'r').read()
+TOKEN = os.environ['BOTENV']
 
 
 
