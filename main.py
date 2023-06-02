@@ -86,7 +86,7 @@ async def confirm_event(update, context):
             with app.app_context():
                 db.session.add(event)
                 db.session.commit()
-            context.job_queue.run_repeating(notify_event, interval=((60*60) * 5), chat_id=update.message.chat_id)
+            context.job_queue.run_repeating(notify_event, interval=((60*60) * 2), chat_id=update.message.chat_id)
         else:
             await update.message.reply_text('El evento ya existe! Prueba de vuelta con el comando /new.')
             return ConversationHandler.END
